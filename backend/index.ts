@@ -33,6 +33,7 @@ const lines: LinesProps[] = [];
 router.ws('/canvas', (ws, req) => {
     connectedClients.push(ws);
     console.log("Client connected. Client total -", connectedClients.length);
+    ws.send(JSON.stringify({type: "PICTURE", payload: lines}));
 
     ws.on("message", (message) => {
         try {
