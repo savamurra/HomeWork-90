@@ -1,18 +1,21 @@
-import { useEffect, useRef, useState } from "react";
+import {useEffect, useRef, useState} from "react";
 import "./App.css";
+import * as React from "react";
 
-interface Line {
-    x1: number;
-    y1: number;
-    x2: number;
-    y2: number;
-    color: string;
+
+interface Circle {
+    x: number,
+    y: number,
+    radius: number,
+    color: string,
 }
+
 
 const App = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+    const [color, setColor] = useState<{ [key: string]: string }>({});
 
     const ws = useRef<WebSocket | null>(null);
 
@@ -23,9 +26,8 @@ const App = () => {
         ws.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-
-            if (data.type === "DRAW_LINE") {
-                drawLine(data.payload);
+            if (data.type === "DRAW_CIRCLE") {
+                drawCircle(data.payload);
             }
         };
 
@@ -39,42 +41,59 @@ const App = () => {
         }
     }, []);
 
-    const drawLine = (line: Line) => {
+    const drawCircle = (circle: Circle) => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
         ctx.beginPath();
-        ctx.strokeStyle = line.color;
-        ctx.lineWidth = 3;
-        ctx.moveTo(line.x1, line.y1);
-        ctx.lineTo(line.x2, line.y2);
-        ctx.stroke();
+        ctx.arc(circle.x, circle.y, circle.radius, 0, 2 * Math.PI);
+        ctx.fillStyle = circle.color;
+        ctx.fill();
     };
 
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const {name, value} = e.target;
+        setColor((prevState) => ({...prevState, [name]: value}));
+    }
+
+
     const MouseStop = (event: React.MouseEvent<HTMLCanvasElement>) => {
+        const newCircle = {
+            x: event.nativeEvent.offsetX,
+            y: event.nativeEvent.offsetY,
+            radius: 10,
+            color: color.color,
+        };
+
+        drawCircle(newCircle);
+
+        if (ws.current) {
+            ws.current.send(JSON.stringify({type: "DRAW_CIRCLE", payload: newCircle}));
+        }
+
         setIsDrawing(true);
-        setLastPos({ x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY });
+        setLastPos({x: event.nativeEvent.offsetX, y: event.nativeEvent.offsetY});
     };
+
 
     const MouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
         if (!isDrawing || !lastPos) return;
 
-        const newLine = {
-            x1: lastPos.x,
-            y1: lastPos.y,
-            x2: event.nativeEvent.offsetX,
-            y2: event.nativeEvent.offsetY,
-            color: "black",
+        const newCircle = {
+            x: event.nativeEvent.offsetX,
+            y: event.nativeEvent.offsetY,
+            radius: 10,
+            color: color.color,
         };
 
-        drawLine(newLine);
+        drawCircle(newCircle);
 
         if (!ws.current) return;
 
-        ws.current.send(JSON.stringify({ type: "DRAW_LINE", payload: newLine }));
-        setLastPos({ x: newLine.x2, y: newLine.y2 });
+        ws.current.send(JSON.stringify({type: "DRAW_CIRCLE", payload: newCircle}));
+        setLastPos({x: newCircle.x, y: newCircle.y});
     };
 
     const MouseUp = () => {
@@ -83,17 +102,21 @@ const App = () => {
     };
 
     return (
-        <div style={{ textAlign: "center", marginTop: "20px" }}>
+        <div style={{textAlign: "center", marginTop: "20px"}}>
             <canvas
                 ref={canvasRef}
                 id="canvas"
                 width="550"
                 height="550"
-                style={{ border: "1px solid black", cursor: "crosshair" }}
+                style={{border: "1px solid black", cursor: "crosshair"}}
                 onMouseDown={MouseStop}
                 onMouseMove={MouseMove}
                 onMouseUp={MouseUp}
             />
+            <form>
+                <label>Выберите цвет заливки</label>
+                <input name="color" type="color" onChange={onChange} />
+            </form>
         </div>
     );
 };

@@ -20,15 +20,14 @@ interface Picture {
     payload: string;
 }
 
-interface LinesProps {
-    x1: number,
-    y1: number,
-    x2: number,
-    y2: number,
-    color: string
+interface CircleProps {
+    x: number,
+    y: number,
+    radius: number,
+    color: string,
 }
 
-const lines: LinesProps[] = [];
+const circles: CircleProps[] = [];
 
 router.ws('/canvas', (ws, req) => {
     connectedClients.push(ws);
@@ -38,17 +37,17 @@ router.ws('/canvas', (ws, req) => {
         try {
             const decodedMessage = JSON.parse(message.toString()) as Picture;
 
-            if (decodedMessage.type === "DRAW_LINE") {
-                const line = decodedMessage.payload as unknown as LinesProps;
-                lines.push(line);
+            if (decodedMessage.type === "DRAW_CIRCLE") {
+                const circle = decodedMessage.payload as unknown as CircleProps;
+                circles.push(circle);
                 connectedClients.forEach(client => {
                     client.send(JSON.stringify({
-                        type: "DRAW_LINE",
-                        payload: line
-
+                        type: "DRAW_CIRCLE",
+                        payload: circle
                     }));
                 })
             }
+
         } catch (error) {
             ws.send(JSON.stringify({error: "Invalid message format"}))
         }
