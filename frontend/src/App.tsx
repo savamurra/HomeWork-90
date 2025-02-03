@@ -23,9 +23,8 @@ const App = () => {
         ws.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            if (data.type === "PICTURE") {
-                data.payload.forEach(drawLine);
-            } else if (data.type === "DRAW_LINE") {
+
+            if (data.type === "DRAW_LINE") {
                 drawLine(data.payload);
             }
         };
